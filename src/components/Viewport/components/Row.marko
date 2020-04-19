@@ -1,0 +1,94 @@
+class {
+  onCreate() {
+    this.state = {
+      draggingButton: -1,
+      focused: -1,
+    }
+    this.handleWindowMousedown = this.handleWindowMousedown.bind(this)
+  }
+  onMount() {
+    window.addEventListener('mousedown', this.handleWindowMousedown)
+  }
+  onDestroy() {
+    window.removeEventListener('mousedown', this.handleWindowMousedown)
+  }
+  handleMouseOver(which) {
+    if (this.state.draggingButton === 0) {
+      this.setCell(which, this.input.rune)
+    } else if (this.state.draggingButton === 2) {
+      this.setCell(which, '')
+    }
+    this.state.focused = which
+  }
+  handleMouseDown(which, e) {
+    if (e.button === 0) {
+      this.setCell(which, this.input.rune)
+    } else if (e.button === 2) {
+      this.setCell(which, '')
+    }
+  }
+  handleMouseOut() {
+    this.state.focused = -1
+  }
+  setCell(cellIndex, rune) {
+    this.input.row[cellIndex].value = rune
+  }
+  handleWindowMousedown(e) {
+    this.state.draggingButton = e.button
+    let mouseUp = e => {
+      this.state.draggingButton = -1
+      window.removeEventListener('mouseup', mouseUp)
+    }
+    window.addEventListener('mouseup', mouseUp)
+  }
+}
+
+style {
+  .Viewport__Canvas__Row {
+    display: block;
+    margin: 0; padding: 0;
+    height: 1.1em;
+    border-bottom: 1px solid var(--bg);
+  }
+  .Viewport__Canvas__Row:first-child {
+    border-top: 1px solid var(--bg);
+  }
+  .Viewport__Canvas__Row__Cell {
+    position: relative;
+    width: 1.1em;
+    height: 1.1em;
+    vertical-align: top;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid var(--bg);
+  }
+  .Viewport__Canvas__Row.-simulated .Viewport__Canvas__Row__Cell {
+    border: 0;
+  }
+  .Viewport__Canvas__Row.-simulated {
+    border: 0;
+  }
+  .Viewport__Canvas__Row__Cell:first-child {
+    border-left: 1px solid var(--bg);
+  }
+  .Viewport__Canvas__Row__Cell__Ghost {
+    pointer-events: none;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0.5;
+    width: 1.1em;
+    height: 1.1em;
+    vertical-align: middle;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+div.Viewport__Canvas__Row class={'-simulated': input.simulate} key=input.rowIndex
+    for|cell, cellIndex| of=input.row
+      div.Viewport__Canvas__Row__Cell key=cellIndex on-mouseover('handleMouseOver', cellIndex) on-mouseout('handleMouseOut') on-mousedown('handleMouseDown', cellIndex) on-contextmenu(e=>false) -- ${cell.value}
+        if(cellIndex===state.focused)
+          div.Viewport__Canvas__Row__Cell__Ghost -- ${input.rune}

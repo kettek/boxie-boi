@@ -1,0 +1,167 @@
+import * as p2 from 'p2'
+
+class {
+  onCreate() {
+    this.state = {
+      simulate: false,
+    }
+    this.fixedTimeStep = 1 / 30
+    this.physicsScale = 30
+    this.update = this.update.bind(this)
+    this.lastTimeMS = undefined
+  }
+  handleMousedown(e) {
+    this.input.unreson.queue()
+    let mouseUp = e => {
+      window.removeEventListener('mouseup', mouseUp)
+      this.input.unreson.unqueue()
+    }
+    window.addEventListener('mouseup', mouseUp)
+  }
+  toggleSimulate() {
+    this.state.simulate = !this.state.simulate
+    if (this.state.simulate == true) {
+      this.startSimulation()
+    } else {
+      this.stopSimulation()
+    }
+  }
+  startSimulation() {
+    this.world = new p2.World({
+      gravity: [0, -5],
+      broadphase: new p2.SAPBroadphase()
+    })
+
+    this.elements = Array.prototype.filter.call(document.querySelectorAll('.Viewport__Canvas__Row__Cell'), el => el.innerText!=='')
+
+    for (let i = 0; i < this.elements.length; i++) {
+      this.createBody(this.elements[i], 0.5)
+    }
+
+    // Browser wallz
+    let body = document.body,
+        html = document.documentElement
+    let height = Math.max( body.scrollHeight, body.offsetHeight,
+                           html.clientHeight, html.scrollHeight, html.offsetHeight )
+    let planeBottomBody = new p2.Body({
+      position: [0, - (height) / this.physicsScale]
+    })
+    planeBottomBody.addShape(new p2.Plane())
+    var planeTopBody = new p2.Body({
+      position: [0, 0]
+    })
+    planeTopBody.addShape(new p2.Plane(),[0,0],Math.PI)
+    var planeLeftBody = new p2.Body()
+    planeLeftBody.addShape(new p2.Plane(),[0,0],-Math.PI/2)
+    var planeRightBody = new p2.Body({
+      position: [ (document.body.getBoundingClientRect().width) / this.physicsScale,0]
+    })
+    planeRightBody.addShape(new p2.Plane(),[0,0],Math.PI/2);
+
+    this.world.addBody(planeBottomBody)
+    this.world.addBody(planeLeftBody)
+    this.world.addBody(planeRightBody)
+    this.world.addBody(planeTopBody)
+
+    requestAnimationFrame(this.update)
+  }
+  stopSimulation() {
+    for (let i = 0; i < this.elements.length; i++) {
+      this.elements[i].style.position = ''
+      this.elements[i].style.top = ''
+      this.elements[i].style.left = ''
+      this.elements[i].style.transformOrigin = ''
+      this.elements[i].style.transform = ''
+    }
+    this.lastTimeMS = undefined
+  }
+  createBody(el, mass) {
+    let rect = el.getBoundingClientRect()
+
+    let body = new p2.Body({
+      mass: mass,
+      position: [
+        (rect.left + rect.width / 2) / this.physicsScale,
+        -(rect.top + rect.height / 2) / this.physicsScale,
+      ],
+      angle: 0,
+    })
+    /*let shape = new p2.Box({
+      width: rect.width / this.physicsScale,
+      height: rect.height / this.physicsScale,
+    })*/
+    let shape = new p2.Circle({
+      radius: rect.width / 2 / this.physicsScale,
+    })
+    body.addShape(shape)
+    console.log(shape)
+
+    this.world.addBody(body)
+    
+    el.style.position = 'fixed'
+    el.style.top = 0
+    el.style.left = 0
+    el.style.transformOrigin = '50% 50%'
+    this.updateTransform(body, el)
+  }
+  updateTransform(body, el) {
+    if (!this.state.simulate) return
+    /*let x = this.physicsScale * (body.interpolatedPosition[0] - body.shapes[0].width/2)
+    let y = -this.physicsScale * (body.interpolatedPosition[1] + body.shapes[0].height/2)*/
+    let x = this.physicsScale * (body.interpolatedPosition[0] - body.shapes[0].radius)
+    let y = -this.physicsScale * (body.interpolatedPosition[1] + body.shapes[0].radius)
+
+    let style = 'translate(' + x + 'px, ' + y + 'px) rotate(' + (-body.interpolatedAngle * 57.2957795) + 'deg)'
+    el.style.transform = style
+    //el.style.WebkitTransform = style + ' translateZ(0)' // Force HW Acceleration
+    //el.style.MozTransform = el.style.OTransform = el.style.msTransform = style
+  }
+  updateTransforms() {
+    for (let i = 0; i < this.elements.length; i++) {
+      let body = this.world.bodies[i]
+      this.updateTransform(body, this.elements[i])
+    }
+  }
+  update(timeMS) {
+    if (this.state.simulate) requestAnimationFrame(this.update)
+    if (timeMS) {
+      let delta = this.lastTimeMS ? (timeMS - this.lastTimeMS) / 1000 : 0
+      this.world.step(this.fixedTimeStep, delta, 5)
+      this.updateTransforms()
+    }
+    this.lastTimeMS = timeMS
+  }
+}
+style {
+  .Viewport {
+    position: relative;
+    grid-area: Viewport;
+    border: 1px solid blue;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+  .Viewport__Canvas {
+    display: block;
+  }
+  .Viewport__Controls {
+    position: absolute;
+    top: 0;
+    right: 0;
+    opacity: 0.25;
+  }
+  .Viewport:hover .Viewport__Controls {
+    opacity: 1.0;
+  }
+  .Viewport__Controls__Item {
+    cursor: pointer;
+  }
+}
+
+div.Viewport
+  div.Viewport__Canvas
+    for|row, rowIndex| of=input.unreson.state.rows
+      Row row=row unreson=input.unreson index=rowIndex rune=input.rune simulate=state.simulate
+  div.Viewport__Controls
+    div.Viewport__Controls__Item on-click('toggleSimulate') -- ${state.simulate?"⏹️":"▶️"}

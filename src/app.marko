@@ -1,0 +1,170 @@
+import i18next from 'i18next'
+import Fetch from 'i18next-fetch-backend';
+import LanguageDetector from 'i18next-browser-languagedetector'
+import { StateObject } from 'unreson'
+
+class {
+  onCreate() {
+    console.log(StateObject)
+    this.state = {
+      isReady: false,
+      rune: '',
+      update: 0,
+    }
+    this.unreson = new StateObject({ rows: [] })
+    // Internationalization Setup
+    i18next
+    .use(Fetch)
+    .use(LanguageDetector)
+    .init({
+      fallbackLng: ['en'],
+      debug: true,
+      preload: ['en'],
+      keySeparator: false,
+      ns: ['app', 'palettes'],
+      backend: {
+        loadPath: '/locales/{{lng}}/{{ns}}.json',
+      },
+      detection: {
+      }
+    }, (err, t) => {
+      this.state.isReady = true
+    })
+
+    this.setCanvasSize(8, 16)
+    // FIXME: Don't touch unreson's internals like this.
+    this.unreson.changes = []
+    this.unreson.changePosition = 0
+  }
+  onMount() {
+    document.oncontextmenu = e => false 
+    window.addEventListener('keydown', this.shortcutHandler.bind(this))
+    this.unreson.on('undo', _=>{
+      this.state.update++
+    })
+    this.unreson.on('redo', _=>{
+      this.state.update++
+    })
+  }
+  setCanvasSize(rows, columns) {
+    this.unreson.queue()
+    this.unreson.state.rows = this.unreson.state.rows.filter((r,ri) => ri < rows)
+    for (let y = 0; y < rows; y++) {
+      if (this.unreson.state.rows.length-1 < y) {
+        this.unreson.state.rows.push([])
+      }
+
+      this.unreson.state.rows[y] = this.unreson.state.rows[y].filter((c,ci) => ci < columns)
+      for (let x = 0; x < columns; x++) {
+        if (this.unreson.state.rows[y].length-1 < x) {
+          this.unreson.state.rows[y].push({
+            color: '',
+            value: '',
+          })
+        }
+      }
+    }
+    this.unreson.unqueue()
+  }
+  setWidth(e) {
+    let n = Number(e.target.value)
+    if (n < 1) return
+    if (n === this.unreson.state.rows[0].length) return
+    this.setCanvasSize(this.unreson.state.rows.length, n)
+    this.state.update++
+  }
+  setHeight(e) {
+    let n = Number(e.target.value)
+    if (n < 1) return
+    if (n === this.unreson.state.rows.length) return
+    this.setCanvasSize(n, this.unreson.state.rows[0].length)
+    this.state.update++
+  }
+  onDestroy() {
+  }
+  handleSelectRune(which) {
+    this.state.rune = which
+  }
+  shortcutHandler(e) {
+    if (e.ctrlKey) {
+      if (e.code === 'KeyZ') {
+        this.unreson.undo()
+      } else if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) {
+        this.unreson.redo()
+      }
+    }
+  }
+}
+
+style {
+  :root {
+    --fg: #993344;
+    --bg: #001133;
+  }
+  @font-face {
+    font-family: 'Abel-Regular';
+    src: url('/fonts/Abel-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+  }
+  body {
+    background-color: #001133;
+    color: #993344;
+    font-size: 5vmin;
+    overflow: hidden;
+  }
+  body, input, textarea, button {
+    font-family: 'Abel-Regular';
+    font-weight: bold;
+  }
+  input {
+    font-size: 1em;
+    padding: .5em;
+  }
+
+  .App {
+    width: 100vw;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 6fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "Header__Title Header__Settings"
+                         "LeftMenu Viewport";
+    font-size: 5vmin;
+  }
+
+  .Header {
+    grid-area: Header;
+    display: flex;
+    align-items: flex-start;
+  }
+  .Header__Title {
+    grid-area: Header__Title;
+    padding: .5em;
+  }
+  .Header__Settings {
+    grid-area: Header__Settings;
+    display: flex;
+    align-items: center;
+  }
+  .LeftMenu {
+    grid-area: LeftMenu;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+if(state.isReady)
+  div.App
+    div.Header__Title -- ${i18next.t('app:title')}
+    div.Header__Settings
+      label
+        label -- ${i18next.t('app:width')}
+        input type='number' size=3 value=component.unreson.state.rows[0].length on-change('setWidth')
+      label
+        label -- ${i18next.t('app:height')}
+        input type='number' size=3 value=component.unreson.state.rows.length on-change('setHeight')
+    div.LeftMenu
+      Palettes on-selectRune('handleSelectRune')
+    Viewport unreson=component.unreson rune=state.rune update=state.update

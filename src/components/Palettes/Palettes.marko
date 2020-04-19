@@ -1,0 +1,90 @@
+import i18next from 'i18next'
+
+class {
+  onCreate() {
+    this.state = {
+      focusedPalette: 'drinks',
+      selectedRune: '',
+      selectedRuneIndex: -1,
+    }
+    this.palettes = {
+      'drinks': ['1F375-1F37B'],
+      'emoticons': ['1F600-1F64F'],
+      'food': ['1F344-1F373'],
+      'transport': ['1F680-1F6C0'],
+    }
+    for (let pName in this.palettes) {
+      for (let i = this.palettes[pName].length-1; i >= 0; i--) {
+        let multi = this.palettes[pName][i].split('-')
+        if (multi.length > 1) {
+          let a = Number.parseInt(multi[0], 16)
+          let b = Number.parseInt(multi[1], 16)
+          this.palettes[pName].splice(i, 1)
+          for (let c = a; c < b; c++) {
+            this.palettes[pName].splice(i, 0, c)
+          }
+        } else {
+        }
+        this.palettes[pName] = this.palettes[pName].map(c=>String.fromCodePoint(c))
+      }
+    }
+    this.selectRune(0)
+  }
+  switchPalettes(which) {
+    this.state.focusedPalette = which
+    this.selectRune(this.state.selectedRuneIndex)
+  }
+  selectRune(index) {
+    this.state.selectedRuneIndex = index
+    this.state.selectedRune = this.palettes[this.state.focusedPalette][index]
+    this.emit('selectRune', this.state.selectedRune)
+  }
+}
+
+style {
+  .Palettes {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .Palettes__Tabs {
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: column;
+    font-size: 75%;
+  }
+  .Palettes__Tabs__Item {
+    color: var(--fg);
+    background: var(--bg);
+    padding: .25em;
+  }
+  .Palettes__Tabs__Item.-focused {
+    color: var(--bg);
+    background: var(--fg);
+  }
+  .Palettes__TabsContent {
+    overflow: auto;
+  }
+  .Palettes__Rune {
+    display: inline-block;
+  }
+  .Palettes__Rune.-focused {
+    background: var(--fg);
+  }
+}
+
+macro|{which}| name='paletteTab'
+  div.Palettes__Tabs__Item class={'-focused': state.focusedPalette===which} on-click('switchPalettes', which) -- ${i18next.t('palettes:'+which)}
+
+macro|{which}| name='paletteContent'
+  for|unicode, unicodeIndex| of=component.palettes[which]
+    div.Palettes__Rune class={'-focused': state.selectedRuneIndex===unicodeIndex} on-click('selectRune', unicodeIndex) -- ${unicode}
+
+div.Palettes
+  div.Palettes__Tabs
+    for|palette| of=Object.keys(component.palettes)
+      paletteTab which=palette
+  div.Palettes__TabsContent
+    for|palette| of=Object.keys(component.palettes)
+      if(state.focusedPalette===palette)
+        paletteContent which=palette
