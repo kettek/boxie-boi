@@ -8,6 +8,20 @@ class {
       selectedRuneIndex: -1,
     }
     this.palettes = {
+      'animals': [
+        // amphibs
+        '1F438',
+        // birds
+        '1F983', '1F414', '1F413', '1F423-1F427', '1F54A', '1F985', '1F986', '1F9A2', '1F989', '1F9A9', '1F99A', '1F99C',
+        // buggos
+        '1F40C', '1F98B', '1F41B', '1F41C', '1F41D', '1F41E', '1F997', '1F577', '1F578', '1F982', '1F99F', '1F9A0',
+        // marine
+        // TODO
+        // mammals
+        // TODO
+        // reptiles/dinos
+        '1F40A', '1F422', '1F98E', '1F40D', '1F432', '1F409', '1F995', '1F996',
+      ],
       'drinks': ['1F375-1F37B'],
       'emoticons': ['1F600-1F64F'],
       'food': ['1F344-1F373'],
@@ -24,9 +38,10 @@ class {
             this.palettes[pName].splice(i, 0, c)
           }
         } else {
+          this.palettes[pName][i] = Number.parseInt(multi[0], 16)
         }
-        this.palettes[pName] = this.palettes[pName].map(c=>String.fromCodePoint(c))
       }
+      this.palettes[pName] = this.palettes[pName].map(c=>String.fromCodePoint(c))
     }
     this.selectRune(0)
   }
